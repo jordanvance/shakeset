@@ -4,11 +4,12 @@ use strict;
 use warnings;
 use MongoDB;
 use File::Spec;
+use boolean;
 
 my $client = MongoDB::MongoClient->new or die("Couldn't connect");
 my $db = $client->get_database('shakespeare') or die ("No db");
 my $plays = $db->get_collection('plays') or die("no collection");
-
+my $id = 0;
 foreach my $arg (@ARGV) {
     my @files = <$arg/*>;
     foreach my $file (@files) {
@@ -64,7 +65,8 @@ foreach my $arg (@ARGV) {
 			}
 			($speaker, $speechline) = ($line =~ m/^([^\t]+)\t(.+)/);
 			$linecount++;
-			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "speaker"=>"$speaker", "line"=>"$speechline","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "speaker"=>"$speaker", "line"=>"$speechline","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber, "_id"=>$id}) or die("Something wrong!");
+			$id++;
 		    }
 		}	
 		elsif($line =~ m/\t/) {
@@ -75,7 +77,8 @@ foreach my $arg (@ARGV) {
 				($speaker) = ($line =~ m/([A-Z][A-Z|\s]{2,})/);
 			    }
 			}
-			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>"true", "line"=>"$line","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
+			my ($action) = ($line =~ m/(\[.+\])/);
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>true, "line"=>"$action","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber, "_id"=>$id++}) or die("Something wrong!");
 			$linecount++;
 		    }
 		    elsif($stillInScene == 1) {
@@ -83,12 +86,14 @@ foreach my $arg (@ARGV) {
 			$scene .= $temp;
 		    }
 		    elsif($line =~ m/\[/ && $line !~m/\]/) {
-			$stageLine = $line;
-			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>"true", "line"=>"$line","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
+			my ($action) = ($line =~ m/\[(.+)$/);
+			$stageLine = $action;
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>true, "line"=>"$action","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber, "_id"=>$id++}) or die("Something wrong!");
 			$linecount++;
 			$direction = 1;
 		    }
 		    elsif($line =~ m/\]/ && $line !~m/\[/) {
+			my ($action) = ($line=~m/\t(.+)\]/);
 			$stageLine .= $line;
 			if($stageLine =~ m/enter/i and !defined($speaker)) {
 			    $stageDirection = () = $stageLine =~ /([A-Z][A-Z\s?]{2,})/g;
@@ -96,19 +101,20 @@ foreach my $arg (@ARGV) {
 				($speaker) = ($stageLine =~ m/([A-Z][A-Z\s?]{2,})/);
 			    }			
 			}
-			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>"true", "line"=>"$line","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>true, "line"=>"$action","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber, "_id"=>$id++}) or die("Something wrong!");
 			$linecount++;
 			$direction = 0;
 		    }
 		    elsif($direction == 1) {
-			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>"true", "line"=>"$line","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
+			my ($action) = ($line =~ m/\t+(.+)/);
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>true, "line"=>"$action","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber, "_id"=>$id++}) or die("Something wrong!");
 			$linecount++;
 			$stageLine .= $line;
 		    }
 		    elsif($direction == 0) {
 			my ($temp) = ($line =~ m/\t(.+)/);
 			$linecount++;
-			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "speaker"=>"$speaker", "line"=>"$temp","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "speaker"=>"$speaker", "line"=>"$temp","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber, "_id"=>$id++}) or die("Something wrong!");
 			$speechline .= "\n".$temp;
 		    }
 		}
