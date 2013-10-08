@@ -24,10 +24,15 @@ foreach my $arg (@ARGV) {
 	my $speechline;
 	my $direction = 0;
 	my $count = 0;
-	my $linecount;
+	my $linecount = 0;
+	my $speechNumber = 0;
+	my $stillInScene = 0;
+	my $stageDirection = 0;
+	my $stageLine;
 	while(defined(my $line = <$lines>)) {
 	    $count++;
 	    if($line =~ m/^\s+$/) {
+		$stillInScene = 0;
 		next;
 	    }
 	    if(!defined($title)) {
@@ -40,35 +45,71 @@ foreach my $arg (@ARGV) {
 	    if($actI == 1) {
 		next if($line =~ m/^\s+?$title\s*?/);
 		if($line =~ m/^ACT/) {
-		    ($act) = ($line =~ m/act ([a-z]+?)/i);
+		    ($act) = ($line =~ m/act ([a-z]+)/i);
 		}
 		elsif($line =~ m/^SCENE/) {
+		    $stillInScene = 1;
 		    ($scene) = ($line =~ m/scene\s+([a-z]+)/i);
 		    ($locale) = ($line =~ m/scene\s+[a-z]+:*\s+?(.+)/i);
+		    #Often times locale will not be specified
+		    if(!defined($locale)) {
+			$locale = "";
+		    }
+		    $speaker = undef;
 		}
 		elsif($line =~ m/^[^\t]/) {
 		    if($line =~ m/[^\t]+\t.+/) {
 			if(defined($speaker)) {
-			    $plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "speaker"=>"$speaker", "lines"=>"$speechline","lineCount"=>$linecount, "type"=>"$type"}) or die("Something wrong!");
+			    $speechNumber++;
 			}
 			($speaker, $speechline) = ($line =~ m/^([^\t]+)\t(.+)/);
-			$linecount=1;
+			$linecount++;
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "speaker"=>"$speaker", "line"=>"$speechline","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
 		    }
 		}	
 		elsif($line =~ m/\t/) {
-		    if($line =~ m/\s*\[.+\]\s*\n/) {
-			next;
+		    if($line =~ m/^\s*\[.+\]\s*$/) {
+			if($line =~ m/enter/i and !defined($speaker)) {
+			    $stageDirection = () = $line =~ /[A-Z][A-Z|\s]{2,}/g;
+			    if($stageDirection == 1) {
+				($speaker) = ($line =~ m/([A-Z][A-Z|\s]{2,})/);
+			    }
+			}
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>"true", "line"=>"$line","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
+			$linecount++;
 		    }
-		    if($line =~ m/\[/) {
+		    elsif($stillInScene == 1) {
+			my ($temp) = ($line =~ m/^\s*(.+)/);
+			$scene .= $temp;
+		    }
+		    elsif($line =~ m/\[/ && $line !~m/\]/) {
+			$stageLine = $line;
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>"true", "line"=>"$line","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
+			$linecount++;
 			$direction = 1;
 		    }
-		    if($line =~ m/\]/) {
+		    elsif($line =~ m/\]/ && $line !~m/\[/) {
+			$stageLine .= $line;
+			if($stageLine =~ m/enter/i and !defined($speaker)) {
+			    $stageDirection = () = $stageLine =~ /([A-Z][A-Z\s?]{2,})/g;
+			    if($stageDirection == 1) {
+				($speaker) = ($stageLine =~ m/([A-Z][A-Z\s?]{2,})/);
+			    }			
+			}
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>"true", "line"=>"$line","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
+			$linecount++;
 			$direction = 0;
 		    }
-		    if($direction == 0) {
-			my ($temp) = ($line =~ m/\t(.+)/);
-			$speechline .= "\n".$temp;
+		    elsif($direction == 1) {
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "stagedirection"=>"true", "line"=>"$line","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
 			$linecount++;
+			$stageLine .= $line;
+		    }
+		    elsif($direction == 0) {
+			my ($temp) = ($line =~ m/\t(.+)/);
+			$linecount++;
+			$plays->save({"title"=>"$title", "act"=>"$act", "scene"=>"$scene", "location"=>"$locale", "speaker"=>"$speaker", "line"=>"$temp","lineNumber"=>$linecount, "type"=>"$type", "speech"=>$speechNumber}) or die("Something wrong!");
+			$speechline .= "\n".$temp;
 		    }
 		}
 	    }
