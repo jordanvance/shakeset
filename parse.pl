@@ -57,6 +57,7 @@ foreach my $arg (@ARGV) {
 			$locale = "";
 		    }
 		    $speaker = undef;
+		    $speechNumber++;
 		}
 		elsif($line =~ m/^[^\t]/) {
 		    if($line =~ m/[^\t]+\t.+/) {

@@ -1,0 +1,54 @@
+.act {
+    width: 100%;
+    float: right;
+	overflow: none;
+}
+.scene {
+    width:90%;
+    vertical-align: middle;
+    float: right;
+    height: auto;
+}
+.speech {
+    width: 80%;
+    vertical-align: middle;
+    float: right;
+    padding-top: 1;
+}
+.lines {
+    width: 75%;
+    text-align: left;
+    float: right;
+    height: auto;
+}
+
+div {
+	padding-bottom: 5px;
+}
+
+.red {
+    color: red;
+}
+
+.black {
+    color: black;
+}
+
+.body {
+	position: relative;
+	top: 65px;
+	left: 0px;
+	width: 100%;
+}
+
+#header {
+    position:fixed;
+    width: 100%;
+    top: 0px;
+    left: 0px;
+    z-index: 1000;
+    background-color: white;
+    text-align: center;
+    margin: auto;
+    height: 60px;
+}
